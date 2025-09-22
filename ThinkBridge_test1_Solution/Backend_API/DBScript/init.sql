@@ -25,10 +25,10 @@ INSERT INTO InvoiceItems (InvoiceItemID,ItemID, InvoiceID) VALUES (1,1, 1);
 
 
 
-CREATE PROCEDURE GetInvoiceReport
+CREATE OR ALTER PROCEDURE [dbo].[GetInvoiceReport]
 AS
 BEGIN
-SELECT Name AS ItemName, Price AS ItemPrice, CustomerName 
+SELECT Invoices.InvoiceID, Name AS ItemName, Price AS ItemPrice, CustomerName 
 FROM Items 
 LEFT JOIN InvoiceItems
 ON Items.ItemID = InvoiceItems.ItemID

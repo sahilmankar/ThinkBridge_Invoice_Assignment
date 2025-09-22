@@ -10,33 +10,62 @@ namespace BuggyApp.Controllers
     [Route("api/[controller]")]
     public class InvoiceController : ControllerBase
     {
-        
+
+        private readonly IConfiguration _configuration;
+
+        public InvoiceController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
         [HttpGet]
         public IActionResult GetInvoice()
         {
-            
-            List<InvoiceReport> items = null;
-            SqlConnection conn = new SqlConnection("Data Source=SAHIL\\SQLEXPRESS01;Initial Catalog=ThinkBridge_InvoiceDB;Integrated Security=True");
-            conn.Open();
-            SqlCommand cmd = new SqlCommand("GetInvoiceStatement", conn);
-            cmd.CommandType = System.Data.CommandType.StoredProcedure;
-            SqlDataReader reader = cmd.ExecuteReader();
-            items = new List<InvoiceReport>();
-            while (reader.Read())
-            {
-                items.Add(new InvoiceReport
-                {
-                    ItemName = reader["ItemName"].ToString(),
-                    ItemPrice = Convert.ToDouble(reader["ItemPrice"]),
-                    CustomerName = reader["CustomerName"].ToString(),
+            var invoiceReport = new Dictionary<int, InvoiceReport>();
 
-                });
-            }
-            if (items.Count > 0) // NullReferenceException 
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                return Ok(new { items });
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand("GetInvoiceReport", conn))
+                {
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            int invoiceID = Convert.ToInt32(reader["InvoiceID"]);
+                            string customerName = reader["CustomerName"]?.ToString();
+                            string itemName = reader["ItemName"]?.ToString();
+                            double itemPrice = reader["ItemPrice"] != DBNull.Value ? Convert.ToDouble(reader["ItemPrice"]) : 0;
+
+                            if (!invoiceReport.ContainsKey(invoiceID))
+                            {
+                                invoiceReport[invoiceID] = new InvoiceReport
+                                {
+                                    InvoiceID = invoiceID,
+                                    CustomerName = customerName,
+                                    Items = new List<InvoiceItemDetail>()
+                                };
+                            }
+
+                            invoiceReport[invoiceID].Items.Add(new InvoiceItemDetail
+                            {
+                                ItemName = itemName,
+                                ItemPrice = itemPrice
+                            });
+                        }
+                    }
+                }
             }
-            return NotFound("No invoice found");
+
+            if (invoiceReport.Count > 0)
+            {
+                return Ok(invoiceReport.Values);
+            }
+
+            return NotFound("No invoices found");
         }
     }
 }

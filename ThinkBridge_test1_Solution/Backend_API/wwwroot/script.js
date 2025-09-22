@@ -4,10 +4,15 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(resp => resp.json())
         .then(data => {
             let html = '<ul>';
-            data.items.forEach(item => {
-                html += `<li>${item.ItemName} - $${item.ItemPrice} - $${item.CustomerName}</li>`;
+            data.forEach(invoice => {
+                html += `<h3>Invoice #${invoice.invoiceID} - ${invoice.customerName}</h3>`;
+                html += '<ul>';
+                invoice.items.forEach(item => {
+                    html += `<li>${item.itemName} - $${item.itemPrice.toFixed(2)}</li>`;
+                });
+                html += '</ul>';
             });
-            html += '</ul>';
+
             document.getElementById('invoice-container').innerHTML = html;
         })
         .catch(er => console.eror("Failed to load invoice:", er));
